@@ -1,0 +1,830 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ProveIt Vendor Security Demo</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap">
+<style>
+:root {
+  /* Layout idea: an internal security console. Fixed sidebar, one workspace per job, a guided tour layered on top. */
+  --bg: #0A1220;
+  --surface: #101A2C;
+  --raised: #15223A;
+  --line: #22324D;
+  --ink: #E9EEF5;
+  --muted: #93A3BA;
+  --brand: #F2A541;
+  --brand-ink: #1A1206;
+  --ok: #43C59E;
+  --warn: #F2C14E;
+  --bad: #F0705A;
+  --info: #7FA3D9;
+  --sans: 'Inter', 'Segoe UI', system-ui, sans-serif;
+  --mono: 'JetBrains Mono', 'DejaVu Sans Mono', monospace;
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+html, body { margin: 0; height: 100%; }
+body { background: var(--bg); color: var(--ink); font: 14.5px/1.5 var(--sans); -webkit-font-smoothing: antialiased; }
+button { font: inherit; color: inherit; }
+:focus-visible { outline: 2px solid var(--brand); outline-offset: 2px; border-radius: 6px; }
+h1, h2, h3, h4 { margin: 0; letter-spacing: -0.01em; text-wrap: balance; }
+p { margin: 0; }
+.mono { font-family: var(--mono); }
+.num { font-variant-numeric: tabular-nums; }
+.muted { color: var(--muted); }
+
+/* shell */
+.side { position: fixed; inset: 0 auto 0 0; width: 236px; background: var(--surface); border-right: 1px solid var(--line); display: flex; flex-direction: column; padding: 18px 14px; gap: 18px; z-index: 5; }
+.logo { display: flex; align-items: center; gap: 10px; padding: 4px 8px; }
+.logo b { font-size: 18px; font-weight: 800; letter-spacing: -0.02em; }
+.logo small { display: block; font-size: 11px; color: var(--muted); font-weight: 500; letter-spacing: 0.02em; }
+.navlist { display: flex; flex-direction: column; gap: 2px; }
+.navlist .grp { font-size: 11px; text-transform: uppercase; letter-spacing: 0.1em; color: var(--muted); padding: 14px 10px 6px; }
+.navlist a { display: flex; align-items: center; gap: 10px; padding: 8px 10px; border-radius: 8px; color: var(--muted); text-decoration: none; font-weight: 500; }
+.navlist a svg { width: 17px; height: 17px; flex: none; }
+.navlist a:hover { color: var(--ink); background: var(--raised); }
+.navlist a.on { color: var(--ink); background: var(--raised); box-shadow: inset 2px 0 0 var(--brand); }
+.navlist .count { margin-left: auto; font-size: 11px; background: var(--bad); color: #1B0B07; border-radius: 999px; padding: 0 7px; font-weight: 700; }
+.side-foot { margin-top: auto; border-top: 1px solid var(--line); padding-top: 14px; display: grid; gap: 8px; font-size: 12px; color: var(--muted); }
+.daybar { height: 6px; background: var(--raised); border-radius: 99px; overflow: hidden; }
+.daybar i { display: block; height: 100%; width: 20.3%; background: var(--brand); }
+
+.main { margin-left: 236px; min-height: 100%; }
+.top { position: sticky; top: 0; z-index: 4; background: rgba(10,18,32,0.9); backdrop-filter: blur(8px); border-bottom: 1px solid var(--line); height: 60px; display: flex; align-items: center; gap: 14px; padding: 0 28px; }
+.crumb { font-weight: 600; }
+.crumb span { color: var(--muted); font-weight: 400; }
+.top .sp { flex: 1; }
+.chip { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; font-weight: 600; padding: 3px 10px; border-radius: 999px; border: 1px solid var(--line); color: var(--muted); white-space: nowrap; }
+.chip.demo { color: var(--brand); border-color: rgba(242,165,65,0.45); }
+.btn { text-decoration: none; display: inline-flex; align-items: center; gap: 8px; border: 1px solid var(--line); background: var(--raised); border-radius: 8px; padding: 7px 14px; font-weight: 600; cursor: pointer; white-space: nowrap; }
+.btn:hover { border-color: #33476A; }
+.btn.primary { background: var(--brand); color: var(--brand-ink); border-color: var(--brand); }
+.btn.primary:hover { filter: brightness(1.06); }
+.btn.ghost { background: transparent; }
+.btn.sm { padding: 4px 10px; font-size: 13px; }
+.btn:disabled { opacity: 0.45; cursor: not-allowed; }
+.avatar { width: 32px; height: 32px; border-radius: 50%; background: #24395C; display: grid; place-items: center; font-size: 12px; font-weight: 700; }
+
+.view { display: none; padding: 28px 28px 64px; max-width: 1320px; }
+.view.on { display: block; }
+.vhead { display: flex; align-items: flex-end; justify-content: space-between; gap: 16px; margin-bottom: 22px; flex-wrap: wrap; }
+.vhead h1 { font-size: 26px; font-weight: 700; }
+.vhead p { color: var(--muted); margin-top: 4px; max-width: 70ch; }
+.grid { display: grid; gap: 16px; }
+.g2 { grid-template-columns: 1fr 1fr; }
+.g3 { grid-template-columns: repeat(3, 1fr); }
+.g4 { grid-template-columns: repeat(4, 1fr); }
+.g-main { grid-template-columns: 1.6fr 1fr; }
+.card { background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 18px; min-width: 0; }
+.card h3 { font-size: 14px; font-weight: 600; display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 12px; }
+.card h3 .muted { font-weight: 400; font-size: 12.5px; }
+.label { font-size: 11.5px; text-transform: uppercase; letter-spacing: 0.08em; color: var(--muted); font-weight: 600; }
+
+/* pills */
+.pill { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; font-weight: 600; padding: 2px 9px; border-radius: 999px; white-space: nowrap; }
+.pill::before { content: ""; width: 6px; height: 6px; border-radius: 50%; background: currentColor; }
+.p-ok { color: var(--ok); background: rgba(67,197,158,0.12); }
+.p-warn { color: var(--warn); background: rgba(242,193,78,0.12); }
+.p-bad { color: var(--bad); background: rgba(240,112,90,0.13); }
+.p-info { color: var(--info); background: rgba(127,163,217,0.13); }
+.p-mute { color: var(--muted); background: rgba(147,163,186,0.12); }
+
+/* tables */
+.tbl { width: 100%; border-collapse: collapse; }
+.tbl th { text-align: left; font-size: 11.5px; text-transform: uppercase; letter-spacing: 0.07em; color: var(--muted); font-weight: 600; padding: 10px 12px; border-bottom: 1px solid var(--line); white-space: nowrap; }
+.tbl td { padding: 11px 12px; border-bottom: 1px solid var(--line); vertical-align: middle; }
+.tbl tr:last-child td { border-bottom: 0; }
+.tbl tr.click { cursor: pointer; }
+.tbl tr.click:hover td { background: var(--raised); }
+.tbl tr.sel td { background: rgba(242,165,65,0.08); }
+.scroll-x { overflow-x: auto; }
+.tier { display: inline-grid; place-items: center; width: 24px; height: 24px; border-radius: 6px; font: 600 12px var(--mono); }
+.t1 { background: rgba(240,112,90,0.18); color: var(--bad); }
+.t2 { background: rgba(242,193,78,0.16); color: var(--warn); }
+.t3 { background: rgba(127,163,217,0.16); color: var(--info); }
+
+/* KPI */
+.kpi { display: flex; flex-direction: column; gap: 10px; }
+.kpi .top-row { display: flex; justify-content: space-between; align-items: flex-start; gap: 8px; }
+.kpi .t { font-size: 13px; color: var(--muted); line-height: 1.35; }
+.kpi .v { font-size: 26px; font-weight: 700; letter-spacing: -0.02em; font-variant-numeric: tabular-nums; }
+.kpi .v small { font-size: 13px; color: var(--muted); font-weight: 500; }
+.meter { height: 6px; background: var(--raised); border-radius: 99px; overflow: hidden; position: relative; }
+.meter i { display: block; height: 100%; border-radius: 99px; background: var(--ok); }
+.meter.w i { background: var(--warn); }
+.meter.b i { background: var(--brand); }
+.kpi .foot { display: flex; justify-content: space-between; font-size: 12px; color: var(--muted); gap: 8px; }
+
+/* phase tracker */
+.phases { display: grid; grid-template-columns: 30fr 60fr 90fr 185fr; gap: 4px; }
+.ph { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+.ph .bar { height: 8px; border-radius: 4px; background: var(--raised); overflow: hidden; }
+.ph .bar i { display: block; height: 100%; background: var(--brand); }
+.ph .n { font-size: 12px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.ph .d { font: 11px var(--mono); color: var(--muted); white-space: nowrap; }
+
+/* lists */
+.list { display: flex; flex-direction: column; }
+.li { display: flex; gap: 12px; align-items: flex-start; padding: 11px 0; border-bottom: 1px solid var(--line); }
+.li:last-child { border-bottom: 0; padding-bottom: 0; }
+.li:first-child { padding-top: 0; }
+.li .ic { width: 30px; height: 30px; border-radius: 8px; display: grid; place-items: center; flex: none; }
+.li .ic svg { width: 16px; height: 16px; }
+.li .body { flex: 1; min-width: 0; }
+.li .body b { font-weight: 600; display: block; }
+.li .body span { color: var(--muted); font-size: 13px; }
+.li .meta { font: 12px var(--mono); color: var(--muted); white-space: nowrap; }
+
+/* heat */
+.heat { display: grid; grid-template-columns: 22px repeat(5, 1fr); gap: 3px; }
+.heat .c { aspect-ratio: 1.5; border-radius: 5px; display: flex; flex-wrap: wrap; align-content: center; justify-content: center; gap: 3px; font: 10px var(--mono); position: relative; }
+.heat .c .s { position: absolute; top: 3px; left: 5px; opacity: 0.7; }
+.heat .hi { background: rgba(240,112,90,0.75); color: #1B0B07; }
+.heat .md { background: rgba(127,163,217,0.35); }
+.heat .lo { background: var(--raised); color: var(--muted); }
+.heat .ax { font: 10px var(--mono); color: var(--muted); display: grid; place-items: center; }
+.dot { width: 20px; height: 20px; border-radius: 50%; background: var(--bg); color: var(--ink); border: 1.5px solid var(--ink); display: grid; place-items: center; font: 600 10.5px var(--mono); }
+
+/* brief */
+.hero-brief { background: radial-gradient(ellipse at 80% 0%, rgba(242,165,65,0.13), transparent 55%), var(--surface); border: 1px solid var(--line); border-radius: 16px; padding: 36px; display: grid; grid-template-columns: 1.15fr 1fr; gap: 36px; align-items: center; }
+.hero-brief h1 { font-size: 40px; font-weight: 800; line-height: 1.05; letter-spacing: -0.03em; }
+.hero-brief h1 em { color: var(--brand); font-style: normal; }
+.hero-brief p { color: var(--muted); font-size: 16px; margin-top: 14px; max-width: 58ch; }
+.stats { display: flex; gap: 28px; margin-top: 22px; flex-wrap: wrap; }
+.stats b { display: block; font-size: 28px; font-weight: 800; letter-spacing: -0.02em; color: var(--ink); }
+.stats span { font-size: 12.5px; color: var(--muted); }
+.chart svg { width: 100%; height: auto; display: block; }
+.ask { border: 1px solid rgba(242,165,65,0.55); background: rgba(242,165,65,0.06); border-radius: 12px; padding: 18px 20px; display: flex; gap: 16px; align-items: center; justify-content: space-between; flex-wrap: wrap; }
+.ask b { color: var(--brand); }
+.types { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+.type { background: var(--raised); border-radius: 10px; padding: 12px 14px; }
+.type b { display: block; font-size: 13.5px; }
+.type span { font-size: 12.5px; color: var(--muted); }
+
+/* trail */
+.cust { display: flex; flex-direction: column; gap: 6px; }
+.cust button { text-align: left; background: transparent; border: 1px solid transparent; border-radius: 10px; padding: 10px 12px; cursor: pointer; display: grid; grid-template-columns: 34px 1fr; gap: 10px; align-items: center; }
+.cust button:hover { background: var(--raised); }
+.cust button[aria-pressed="true"] { background: var(--raised); border-color: rgba(242,165,65,0.5); }
+.cust .av { width: 34px; height: 34px; border-radius: 50%; background: #24395C; display: grid; place-items: center; font-size: 12px; font-weight: 700; }
+.cust b { display: block; font-weight: 600; }
+.cust .cid { display: block; font: 12px var(--mono); color: var(--muted); }
+.flow { position: relative; display: flex; flex-direction: column; gap: 0; }
+.hop { display: grid; grid-template-columns: 72px 22px 1fr; gap: 12px; }
+.hop .time { font: 12.5px var(--mono); color: var(--brand); padding-top: 12px; text-align: right; }
+.hop .rail { position: relative; display: flex; justify-content: center; }
+.hop .rail::before { content: ""; position: absolute; top: 0; bottom: 0; width: 2px; background: var(--line); }
+.hop:first-child .rail::before { top: 18px; }
+.hop:last-child .rail::before { bottom: calc(100% - 18px); }
+.hop .rail i { position: relative; margin-top: 13px; width: 12px; height: 12px; border-radius: 50%; background: var(--surface); border: 2px solid var(--brand); }
+.hop.out .rail i { border-color: var(--bad); background: var(--bad); }
+.hop .box { background: var(--raised); border: 1px solid var(--line); border-radius: 10px; padding: 11px 14px; margin-bottom: 10px; display: flex; justify-content: space-between; gap: 12px; align-items: center; flex-wrap: wrap; }
+.hop .box b { font-weight: 600; }
+.hop .box .f { font-size: 12.5px; color: var(--muted); }
+.wall { display: grid; grid-template-columns: 72px 22px 1fr; gap: 12px; margin: 2px 0 12px; }
+.wall div:last-child { border-top: 2px dashed var(--bad); padding-top: 6px; font: 600 11px var(--mono); color: var(--bad); letter-spacing: 0.1em; }
+.seg { display: inline-flex; background: var(--raised); border: 1px solid var(--line); border-radius: 8px; padding: 3px; gap: 3px; }
+.seg button { border: 0; background: transparent; padding: 5px 12px; border-radius: 6px; cursor: pointer; font-weight: 600; font-size: 13px; color: var(--muted); }
+.seg button[aria-pressed="true"] { background: var(--brand); color: var(--brand-ink); }
+.masked { color: var(--muted); font-style: italic; }
+.source { border-left: 3px solid var(--brand); }
+.source p + p { margin-top: 8px; }
+.source code { font: 12.5px var(--mono); background: var(--raised); padding: 1px 6px; border-radius: 4px; }
+
+/* drawer */
+.scrim { position: fixed; inset: 0; background: rgba(4,8,15,0.55); z-index: 20; display: none; }
+.scrim.on { display: block; }
+.drawer { position: fixed; top: 0; right: 0; bottom: 0; width: min(460px, 100%); background: var(--surface); border-left: 1px solid var(--line); z-index: 21; transform: translateX(100%); transition: transform 0.28s ease; display: flex; flex-direction: column; }
+.drawer.on { transform: none; }
+.drawer .dh { padding: 20px 22px; border-bottom: 1px solid var(--line); display: flex; justify-content: space-between; gap: 10px; }
+.drawer .db { padding: 20px 22px; overflow: auto; flex: 1; display: grid; gap: 18px; align-content: start; }
+.drawer .df { padding: 16px 22px; border-top: 1px solid var(--line); display: flex; gap: 10px; justify-content: flex-end; align-items: center; }
+.x { background: transparent; border: 0; color: var(--muted); cursor: pointer; font-size: 22px; line-height: 1; padding: 4px 8px; }
+.check { display: flex; gap: 10px; align-items: flex-start; padding: 9px 0; border-bottom: 1px solid var(--line); cursor: pointer; }
+.check input { margin-top: 3px; accent-color: var(--brand); width: 16px; height: 16px; }
+.check span small { display: block; color: var(--muted); font-size: 12.5px; }
+.kv { display: grid; grid-template-columns: 130px 1fr; gap: 6px 12px; font-size: 13.5px; }
+.kv dt { color: var(--muted); }
+.kv dd { margin: 0; }
+.gate { border-radius: 10px; padding: 12px 14px; font-size: 13.5px; }
+.gate.closed { background: rgba(240,112,90,0.1); color: var(--bad); }
+.gate.open { background: rgba(67,197,158,0.1); color: var(--ok); }
+
+/* matrix */
+.mx td, .mx th { text-align: center; }
+.mx td:first-child, .mx th:first-child { text-align: left; }
+.lv { display: inline-block; font-size: 12px; font-weight: 600; padding: 2px 8px; border-radius: 6px; }
+.lv-full { background: rgba(240,112,90,0.14); color: var(--bad); }
+.lv-sum { background: rgba(242,193,78,0.13); color: var(--warn); }
+.lv-none { background: rgba(67,197,158,0.12); color: var(--ok); }
+
+/* bars */
+.hbar { display: grid; grid-template-columns: 150px 1fr 120px; gap: 12px; align-items: center; padding: 7px 0; }
+.hbar .tr { height: 10px; background: var(--raised); border-radius: 4px; overflow: hidden; display: flex; }
+.hbar .tr i { display: block; height: 100%; }
+.hbar .amt { font: 12.5px var(--mono); text-align: right; color: var(--muted); }
+.hbar .amt b { color: var(--ink); font-weight: 500; }
+.impact { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
+.impact div { background: var(--raised); border-radius: 10px; padding: 12px 14px; }
+.impact .label { color: var(--brand); }
+.impact p { margin-top: 6px; font-size: 13.5px; }
+.ms { display: grid; gap: 6px; margin-top: 10px; font-size: 13px; }
+.ms div { display: flex; gap: 8px; align-items: flex-start; color: var(--muted); }
+.ms div.done { color: var(--ink); }
+.ms svg { width: 14px; height: 14px; flex: none; margin-top: 3px; }
+
+/* modal + tour */
+.modal { position: fixed; inset: 0; z-index: 40; display: none; align-items: center; justify-content: center; background: rgba(4,8,15,0.7); padding: 20px; }
+.modal.on { display: flex; }
+.modal .m { background: var(--surface); border: 1px solid var(--line); border-radius: 16px; width: min(560px, 100%); padding: 30px; display: grid; gap: 16px; box-shadow: 0 30px 80px rgba(0,0,0,0.5); }
+.modal h2 { font-size: 24px; font-weight: 800; letter-spacing: -0.02em; }
+.modal p { color: var(--muted); }
+.modal .row { display: flex; gap: 10px; flex-wrap: wrap; }
+.spot { position: fixed; z-index: 30; border-radius: 12px; box-shadow: 0 0 0 4px var(--brand), 0 0 0 9999px rgba(4,8,15,0.62); pointer-events: none; transition: all 0.35s ease; display: none; }
+.spot.on { display: block; }
+.coach { position: fixed; z-index: 31; width: 360px; max-width: calc(100vw - 24px); background: #FBF7EF; color: #141B28; border-radius: 14px; padding: 18px 18px 14px; box-shadow: 0 24px 60px rgba(0,0,0,0.45); display: none; transition: top 0.35s ease, left 0.35s ease; }
+.coach.on { display: block; }
+.coach .step { font: 600 11px var(--mono); color: #8F4E00; letter-spacing: 0.08em; }
+.coach h4 { font-size: 17px; font-weight: 700; margin: 6px 0 6px; }
+.coach p { font-size: 14px; color: #3A4458; }
+.coach .say { margin-top: 10px; background: #F1E7D4; border-radius: 8px; padding: 8px 10px; font-size: 13px; color: #3A2A10; }
+.coach .say b { font-weight: 700; }
+.coach .nav { display: flex; justify-content: space-between; align-items: center; margin-top: 14px; gap: 8px; }
+.coach .dots { display: flex; gap: 4px; }
+.coach .dots i { width: 6px; height: 6px; border-radius: 50%; background: #D3C8B4; }
+.coach .dots i.on { background: #8F4E00; }
+.coach .btn { background: #fff; border-color: #D9D1C2; color: #141B28; }
+.coach .btn.primary { background: #141B28; color: #FBF7EF; border-color: #141B28; }
+.coach .skip { white-space: nowrap; background: none; border: 0; color: #5B6478; cursor: pointer; font-size: 13px; text-decoration: underline; }
+.toast { position: fixed; top: 74px; left: 50%; transform: translateX(-50%) translateY(-12px); background: var(--ink); color: var(--bg); padding: 10px 16px; border-radius: 10px; font-weight: 600; z-index: 50; opacity: 0; transition: all 0.25s ease; pointer-events: none; }
+.toast.on { opacity: 1; transform: translateX(-50%); }
+
+@media (max-width: 1100px) {
+  .g4 { grid-template-columns: 1fr 1fr; }
+  .g-main, .hero-brief { grid-template-columns: 1fr; }
+}
+@media (max-width: 860px) {
+  .side { position: static; width: auto; flex-direction: row; overflow-x: auto; padding: 10px; gap: 10px; border-right: 0; border-bottom: 1px solid var(--line); }
+  .navlist { flex-direction: row; }
+  .navlist .grp, .side-foot, .logo small { display: none; }
+  .navlist a span.t { white-space: nowrap; }
+  .main { margin-left: 0; }
+  .top { padding: 0 16px; }
+  .top .chip:not(.demo), .avatar { display: none; }
+  .view { padding: 20px 16px 48px; }
+  .g2, .g3, .types, .impact { grid-template-columns: 1fr; }
+  .hbar { grid-template-columns: 1fr 100px; }
+  .hbar .tr { grid-column: 1 / -1; grid-row: 2; }
+}
+@media (max-width: 520px) { .g4 { grid-template-columns: 1fr; } .hero-brief { padding: 22px; } .hero-brief h1 { font-size: 30px; } }
+@media (prefers-reduced-motion: reduce) { * { transition: none !important; animation: none !important; } }
+</style>
+</head>
+<body>
+
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <symbol id="i-brief" viewBox="0 0 24 24"><path d="M4 5h16v14H4z M8 9h8 M8 13h8 M8 17h5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></symbol>
+  <symbol id="i-home" viewBox="0 0 24 24"><path d="M4 13h6V4H4z M14 20h6v-9h-6z M14 8h6V4h-6z M4 20h6v-3H4z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/></symbol>
+  <symbol id="i-trail" viewBox="0 0 24 24"><circle cx="5" cy="12" r="2.5" fill="none" stroke="currentColor" stroke-width="1.8"/><circle cx="19" cy="5" r="2.5" fill="none" stroke="currentColor" stroke-width="1.8"/><circle cx="19" cy="19" r="2.5" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M7.5 12h4l5-5.5 M11.5 12l5 5.5" fill="none" stroke="currentColor" stroke-width="1.8"/></symbol>
+  <symbol id="i-vendor" viewBox="0 0 24 24"><path d="M12 3l8 3v6c0 4.5-3.4 7.8-8 9-4.6-1.2-8-4.5-8-9V6z M8.5 12l2.5 2.5 4.5-5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" stroke-linecap="round"/></symbol>
+  <symbol id="i-key" viewBox="0 0 24 24"><circle cx="8" cy="14" r="4" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M11 11l8-8 M16 6l2 2 M14 8l2 2" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></symbol>
+  <symbol id="i-user" viewBox="0 0 24 24"><circle cx="12" cy="8" r="4" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M4 21c1-4.5 4-6.5 8-6.5s7 2 8 6.5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></symbol>
+  <symbol id="i-db" viewBox="0 0 24 24"><ellipse cx="12" cy="6" rx="7" ry="3" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M5 6v12c0 1.7 3.1 3 7 3s7-1.3 7-3V6 M5 12c0 1.7 3.1 3 7 3s7-1.3 7-3" fill="none" stroke="currentColor" stroke-width="1.8"/></symbol>
+  <symbol id="i-bell" viewBox="0 0 24 24"><path d="M6 16V11a6 6 0 0 1 12 0v5l2 2H4z M10 21h4" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" stroke-linecap="round"/></symbol>
+  <symbol id="i-plan" viewBox="0 0 24 24"><path d="M4 6h10 M4 12h16 M4 18h7" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><circle cx="18" cy="6" r="2" fill="currentColor"/><circle cx="15" cy="18" r="2" fill="currentColor"/></symbol>
+  <symbol id="i-check" viewBox="0 0 24 24"><path d="M5 12.5l4.5 4.5L19 7.5" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+  <symbol id="i-circle" viewBox="0 0 24 24"><circle cx="12" cy="12" r="7" fill="none" stroke="currentColor" stroke-width="2"/></symbol>
+  <symbol id="i-warn" viewBox="0 0 24 24"><path d="M12 4l9 16H3z M12 10v4 M12 17v.5" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/></symbol>
+  <symbol id="i-play" viewBox="0 0 24 24"><path d="M8 5v14l11-7z" fill="currentColor"/></symbol>
+</svg>
+
+<aside class="side">
+  <div class="logo">
+    <svg width="30" height="30" viewBox="0 0 32 32" aria-hidden="true"><path d="M16 2l12 4.5v9c0 7-5.2 12-12 14.5C9.2 27.5 4 22.5 4 15.5v-9z" fill="#F2A541"/><path d="M10.5 16l3.8 3.8 7.4-7.6" fill="none" stroke="#1A1206" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg>
+    <div><b>ProveIt</b><small>NtapAT&amp;T Digital Security</small></div>
+  </div>
+  <nav class="navlist" aria-label="Workspaces">
+    <a href="#overview" data-v="overview"><svg><use href="#i-home"/></svg><span class="t">Overview</span></a>
+    <a href="#trail" data-v="trail"><svg><use href="#i-trail"/></svg><span class="t">Data trail</span></a>
+    <div class="grp">Protect</div>
+    <a href="#vendors" data-v="vendors"><svg><use href="#i-vendor"/></svg><span class="t">Vendors</span><span class="count" id="vendorCount">2</span></a>
+    <a href="#access" data-v="access"><svg><use href="#i-key"/></svg><span class="t">Access</span></a>
+    <a href="#data" data-v="data"><svg><use href="#i-db"/></svg><span class="t">Data storage</span></a>
+    <a href="#alerts" data-v="alerts"><svg><use href="#i-bell"/></svg><span class="t">Alerts</span></a>
+    <a href="#privacy" data-v="privacy"><svg><use href="#i-user"/></svg><span class="t">Privacy requests</span></a>
+  </nav>
+  <div class="side-foot">
+    <div style="display:flex;justify-content:space-between"><span>Program day</span><span class="mono" style="color:var(--ink)">74 / 365</span></div>
+    <div class="daybar"><i></i></div>
+    <span>Stage 2 of 4</span>
+  </div>
+</aside>
+
+<div class="main">
+  <header class="top">
+    <div class="crumb" id="crumb">Overview</div>
+    <div class="sp"></div>
+    <span class="chip demo" title="All records, vendors and figures in this demo are synthetic, except the program targets and budget">Demo data · synthetic</span>
+    <span class="chip">Customer data protection</span>
+    <button class="btn primary" id="tourBtn" type="button"><svg width="14" height="14"><use href="#i-play"/></svg>Take the tour</button>
+    <div class="avatar" title="Security Ops">SO</div>
+  </header>
+
+  <!-- OVERVIEW -->
+  <section class="view" id="v-overview" data-title="Overview">
+    <div class="vhead">
+      <div><h1>Good morning, Security team</h1><p>Here’s how our customer data protection is going. We’re on day 74 of a one-year plan.</p></div>
+      <span class="chip">Next deadline: <b style="color:var(--ink)">Day 90</b> · 16 days</span>
+    </div>
+    <div class="card" style="margin-bottom:16px">
+      <h3>One-year plan <span class="muted">Four stages</span></h3>
+      <div class="phases">
+        <div class="ph"><div class="bar"><i style="width:100%"></i></div><span class="n">1 · List every vendor</span><span class="d">Day 0–30 · Done</span></div>
+        <div class="ph"><div class="bar"><i style="width:73%"></i></div><span class="n">2 · Limit access, check risky vendors</span><span class="d">Day 31–90 · Now</span></div>
+        <div class="ph"><div class="bar"><i style="width:0"></i></div><span class="n">3 · Customer privacy tools</span><span class="d">Day 91–180</span></div>
+        <div class="ph"><div class="bar"><i style="width:0"></i></div><span class="n">4 · Yearly re-checks</span><span class="d">Day 181–365</span></div>
+      </div>
+    </div>
+    <div class="grid g4" id="t-kpis">
+      <div class="card kpi"><div class="top-row"><span class="t">Outside companies listed and ranked by risk</span><span class="pill p-ok">Done</span></div><div class="v">100% <small>48 of 48</small></div><div class="meter"><i style="width:100%"></i></div><div class="foot"><span>Target 100% · Day 30</span><span>Vendor Mgmt</span></div></div>
+      <div class="card kpi"><div class="top-row"><span class="t">Employees using two-step login</span><span class="pill p-ok">Done</span></div><div class="v">100% <small>500 of 500</small></div><div class="meter"><i style="width:100%"></i></div><div class="foot"><span>Target 100% · Day 60</span><span>IT/Security</span></div></div>
+      <div class="card kpi"><div class="top-row"><span class="t">Employees who see only what their job needs</span><span class="pill p-ok">Met</span></div><div class="v" id="lpKpi">96% <small>481 of 500</small></div><div class="meter"><i id="lpMeter" style="width:96%"></i></div><div class="foot"><span>Target 95% · Day 60</span><span>IT/Sec &amp; Managers</span></div></div>
+      <div class="card kpi"><div class="top-row"><span class="t">High-risk companies checked</span><span class="pill p-warn">16 days left</span></div><div class="v">75% <small>9 of 12</small></div><div class="meter w"><i style="width:75%"></i></div><div class="foot"><span>Target 100% · Day 90</span><span>Vendor Mgmt &amp; IT/Sec</span></div></div>
+      <div class="card kpi"><div class="top-row"><span class="t">Customer requests answered on time</span><span class="pill p-info">Tracking early</span></div><div class="v">100% <small>14 of 14</small></div><div class="meter"><i style="width:100%"></i></div><div class="foot"><span>Target 100% · From day 120</span><span>Legal &amp; Marketing</span></div></div>
+      <div class="card kpi"><div class="top-row"><span class="t">How fast we stop problems</span><span class="pill p-ok">On track</span></div><div class="v">30% <small>faster · 6.0 h → 4.2 h</small></div><div class="meter b"><i style="width:60%"></i></div><div class="foot"><span>Target 50% faster · Day 180</span><span>IT/Security</span></div></div>
+      <div class="card kpi"><div class="top-row"><span class="t">Data storage places labeled</span><span class="pill p-ok">On track</span></div><div class="v">59% <small>38 of 64</small></div><div class="meter b"><i style="width:59%"></i></div><div class="foot"><span>Target 100% · Day 365</span><span>IT/Data Mgmt</span></div></div>
+      <div class="card kpi"><div class="top-row"><span class="t">Companies with up-to-date safety proof</span><span class="pill p-ok">On track</span></div><div class="v">65% <small>31 of 48</small></div><div class="meter b"><i style="width:65%"></i></div><div class="foot"><span>Target 100% · Day 365</span><span>Vendor Mgmt &amp; IT/Data</span></div></div>
+    </div>
+    <div class="grid" style="margin-top:16px">
+      <div class="card" id="t-attention">
+        <h3>Needs attention <span class="muted">4 items</span></h3>
+        <div class="list">
+          <div class="li"><div class="ic" style="background:rgba(240,112,90,0.14);color:var(--bad)"><svg><use href="#i-warn"/></svg></div><div class="body"><b>New company waiting for a safety check: Chatterly</b><span>It can’t get customer data until it passes.</span></div><a class="btn sm" href="#vendors" data-open="chatterly">Review</a></div>
+          <div class="li"><div class="ic" style="background:rgba(242,193,78,0.14);color:var(--warn)"><svg><use href="#i-vendor"/></svg></div><div class="body"><b>Quantilo’s safety proof runs out in 12 days</b><span>High-risk company · it sees what customers buy.</span></div><a class="btn sm" href="#vendors" data-open="quantilo">Open</a></div>
+          <div class="li"><div class="ic" style="background:rgba(242,193,78,0.14);color:var(--warn)"><svg><use href="#i-db"/></svg></div><div class="body"><b>A folder of support records can be opened by anyone with the link</b><span>Needs to be locked.</span></div><a class="btn sm" href="#data">Fix</a></div>
+          <div class="li"><div class="ic" style="background:rgba(127,163,217,0.14);color:var(--info)"><svg><use href="#i-key"/></svg></div><div class="body"><b><span id="excessCount">19</span> employees can still see more than their job needs</b><span>We hit our goal; keep cleaning up.</span></div><a class="btn sm" href="#access">Limit</a></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- TRAIL -->
+  <section class="view" id="v-trail" data-title="Data trail">
+    <div class="vhead">
+      <div><h1>Data trail</h1><p>Pick a customer to see which outside companies got their information after a purchase, and whether each company passed our safety check.</p></div>
+      <span class="chip demo">Mock customer records</span>
+    </div>
+    <div class="grid" style="grid-template-columns: 280px 1fr">
+      <div class="card"><h3>Customers <span class="muted">5 of 1,000,000</span></h3><div class="cust" id="custList"></div></div>
+      <div class="card" id="t-trail">
+        <h3><span id="trailTitle">Maria Alvarez · Tuesday, 9:14 p.m.</span><span class="pill p-bad" id="trailCount">Shared with 3 outside companies</span></h3>
+        <div class="flow" id="flow"></div>
+      </div>
+    </div>
+    <div class="grid" style="margin-top:16px">
+      <div class="card" id="t-record">
+        <h3>Customer record <span class="seg" role="group" aria-label="Record view"><button type="button" id="vFull" aria-pressed="true">Full record</button><button type="button" id="vSum" aria-pressed="false">What support sees</button></span></h3>
+        <div class="scroll-x"><table class="tbl" id="recTbl"><tbody></tbody></table></div>
+        <p class="muted" id="recNote" style="font-size:13px;margin-top:10px"></p>
+      </div>
+    </div>
+    <p class="muted" style="font-size:12.5px;margin-top:10px">Demo customer records are synthetic: fictional names, example.com emails and test card numbers.</p>
+  </section>
+
+  <!-- VENDORS -->
+  <section class="view" id="v-vendors" data-title="Vendors">
+    <div class="vhead">
+      <div><h1>Vendors</h1><p>Every outside company that handles customer data, ranked by risk. A new company can’t get customer data until it passes a safety check.</p></div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap"><span class="chip">48 companies · 12 high risk</span><button class="btn" type="button" data-open="chatterly">New request: Chatterly</button></div>
+    </div>
+    <div class="grid g4" style="margin-bottom:16px">
+      <div class="card kpi"><span class="t">Companies listed</span><div class="v">48 <small>of 48</small></div></div>
+      <div class="card kpi"><span class="t">High-risk companies checked</span><div class="v">9 <small>of 12 · due day 90</small></div></div>
+      <div class="card kpi"><span class="t">Up-to-date safety proof</span><div class="v">31 <small>of 48</small></div></div>
+      <div class="card kpi"><span class="t">Blocked or suspended</span><div class="v" id="blockedKpi">2 <small>no check, no data</small></div></div>
+    </div>
+    <div class="card" id="t-vendors" style="padding:6px 6px 2px">
+      <div class="scroll-x"><table class="tbl"><thead><tr><th>Company</th><th>Risk</th><th>Customer data they get</th><th>Safety proof</th><th>Last checked</th><th>Status</th></tr></thead><tbody id="vendTbody"></tbody></table></div>
+    </div>
+    <p class="muted" style="font-size:12.5px;margin-top:10px">Showing 10 of 48 vendors. Click a company to see its safety check.</p>
+  </section>
+
+  <!-- ACCESS -->
+  <section class="view" id="v-access" data-title="Access">
+    <div class="vhead"><div><h1>Access</h1><p>Employees only see the customer information their job needs. Everyone logs in with a password plus a code on their phone, and gets logged out after 15 minutes away.</p></div></div>
+    <div class="grid g4" style="margin-bottom:16px">
+      <div class="card kpi"><span class="t">Two-step login (password + phone code)</span><div class="v">100% <small>500 accounts</small></div><span class="pill p-ok">Target met day 60</span></div>
+      <div class="card kpi"><span class="t">See only what their job needs</span><div class="v" id="lpKpi2">96% <small>481 of 500</small></div><span class="pill p-ok">Target 95%</span></div>
+      <div class="card kpi"><span class="t">Auto-logout</span><div class="v">15 <small>minutes idle</small></div><span class="pill p-ok">On for all apps</span></div>
+      <div class="card kpi"><span class="t">AI tools</span><div class="v">2 <small>approved</small></div><span class="pill p-ok">Customer data can’t go into others</span></div>
+    </div>
+    <div class="grid g-main">
+      <div class="card" id="t-matrix">
+        <h3>What each job can see <span class="muted">By role</span></h3>
+        <div class="scroll-x"><table class="tbl mx">
+          <thead><tr><th>Role</th><th>Name</th><th>Email</th><th>Card</th><th>Purchases</th><th>Download all</th></tr></thead>
+          <tbody>
+            <tr><td>Support agent</td><td><span class="lv lv-sum">Summary</span></td><td><span class="lv lv-sum">Partly hidden</span></td><td><span class="lv lv-none">None</span></td><td><span class="lv lv-sum">Last 90 days</span></td><td><span class="lv lv-none">No</span></td></tr>
+            <tr><td>Marketing analyst</td><td><span class="lv lv-none">None</span></td><td><span class="lv lv-sum">Hidden</span></td><td><span class="lv lv-none">None</span></td><td><span class="lv lv-sum">Totals only</span></td><td><span class="lv lv-none">No</span></td></tr>
+            <tr><td>Finance</td><td><span class="lv lv-full">Full</span></td><td><span class="lv lv-full">Full</span></td><td><span class="lv lv-sum">Last 4</span></td><td><span class="lv lv-full">Full</span></td><td><span class="lv lv-sum">With approval</span></td></tr>
+            <tr><td>Engineer</td><td><span class="lv lv-none">None</span></td><td><span class="lv lv-none">None</span></td><td><span class="lv lv-none">None</span></td><td><span class="lv lv-none">None</span></td><td><span class="lv lv-sum">Emergency only</span></td></tr>
+            <tr><td>Security admin</td><td><span class="lv lv-full">Full</span></td><td><span class="lv lv-full">Full</span></td><td><span class="lv lv-sum">Last 4</span></td><td><span class="lv lv-full">Full</span></td><td><span class="lv lv-sum">Logged</span></td></tr>
+          </tbody>
+        </table></div>
+      </div>
+      <div class="card" id="t-excess">
+        <h3>Can see more than their job needs <span class="muted" id="excessLabel">19 accounts</span></h3>
+        <div class="list" id="excessList"></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- DATA -->
+  <section class="view" id="v-data" data-title="Data storage">
+    <div class="vhead"><div><h1>Data storage</h1><p>Know where customer data is kept, lock anything left open, and delete old accounts nobody has used in a year. Data we don’t keep can’t leak.</p></div></div>
+    <div class="grid g3" style="margin-bottom:16px">
+      <div class="card kpi"><span class="t">Storage places labeled</span><div class="v" id="labKpi">38 <small>of 64</small></div><div class="meter b"><i id="labMeter" style="width:59%"></i></div></div>
+      <div class="card kpi"><span class="t">Left open by mistake</span><div class="v" id="flagKpi">1 <small>public link</small></div></div>
+      <div class="card kpi" id="t-retention"><span class="t">Unused for over a year</span><div class="v">41,280 <small>accounts</small></div><span class="pill p-info">Scheduled for deletion · day 90</span></div>
+    </div>
+    <div class="card" id="t-stores" style="padding:6px 6px 2px">
+      <div class="scroll-x"><table class="tbl"><thead><tr><th>Name</th><th>What it is</th><th>What’s inside</th><th>Label</th><th>Safety check</th><th></th></tr></thead><tbody id="storeTbody"></tbody></table></div>
+    </div>
+  </section>
+
+  <!-- ALERTS -->
+  <section class="view" id="v-alerts" data-title="Alerts">
+    <div class="vhead"><div><h1>Alerts</h1><p>ProveIt watches for anything suspicious and warns us right away. Many threats are blocked automatically.</p></div></div>
+    <div class="grid g-main">
+      <div class="card" id="t-activity"><h3>Activity <span class="muted">Last 24 hours</span></h3>
+        <div class="list">
+          <div class="li"><div class="ic" style="background:rgba(240,112,90,0.14);color:var(--bad)"><svg><use href="#i-warn"/></svg></div><div class="body"><b>Someone tried 1,240 wrong passwords</b><span>Blocked automatically. No accounts were broken into.</span></div><span class="meta">09:12</span></div>
+          <div class="li"><div class="ic" style="background:rgba(240,112,90,0.14);color:var(--bad)"><svg><use href="#i-db"/></svg></div><div class="body"><b>An employee tried to download 20,000 customer records</b><span>Stopped: their job doesn’t allow it. Their manager was told.</span></div><span class="meta">08:47</span></div>
+          <div class="li"><div class="ic" style="background:rgba(242,193,78,0.14);color:var(--warn)"><svg><use href="#i-vendor"/></svg></div><div class="body"><b>Quantilo’s safety proof runs out in 12 days</b><span>We asked them for an updated copy.</span></div><span class="meta">07:30</span></div>
+          <div class="li"><div class="ic" style="background:rgba(67,197,158,0.14);color:var(--ok)"><svg><use href="#i-check"/></svg></div><div class="body"><b>Payment records are now tracked</b><span>We can see every time someone opens one.</span></div><span class="meta">Yesterday</span></div>
+        </div>
+      </div>
+      <div class="card" id="t-response"><h3>How fast we stop a problem <span class="muted">Hours</span></h3>
+        <div class="hbar"><span>Before program</span><div class="tr"><i style="width:100%;background:var(--muted)"></i></div><span class="amt"><b>6.0 h</b></span></div>
+        <div class="hbar"><span>Today</span><div class="tr"><i style="width:70%;background:var(--brand)"></i></div><span class="amt"><b>4.2 h</b> · −30%</span></div>
+        <div class="hbar"><span>Target (day 180)</span><div class="tr"><i style="width:50%;background:var(--ok)"></i></div><span class="amt"><b>3.0 h</b> · −50%</span></div>
+        <p class="muted" style="font-size:13px;margin-top:10px">Practice drill on day 180.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- PRIVACY -->
+  <section class="view" id="v-privacy" data-title="Privacy requests">
+    <div class="vhead"><div><h1>Privacy requests</h1><p>When customers ask to see, fix or delete their information, or stop marketing emails, every request is tracked here so it’s answered on time.</p></div><span class="pill p-info">Customer self-service page · day 120</span></div>
+    <div class="grid g3" style="margin-bottom:16px">
+      <div class="card kpi"><span class="t">Answered on time</span><div class="v" id="onTime">100% <small>14 of 14</small></div></div>
+      <div class="card kpi"><span class="t">Open requests</span><div class="v" id="openReq">3</div></div>
+      <div class="card kpi"><span class="t">Customers who said yes to marketing</span><div class="v">612,400 <small>customers</small></div></div>
+    </div>
+    <div class="card" id="t-privacy" style="padding:6px 6px 2px">
+      <div class="scroll-x"><table class="tbl"><thead><tr><th>Request</th><th>Customer</th><th>Type</th><th>Due</th><th>Status</th><th></th></tr></thead><tbody id="reqTbody"></tbody></table></div>
+    </div>
+  </section>
+
+</div>
+
+<!-- vendor drawer -->
+<div class="scrim" id="scrim"></div>
+<aside class="drawer" id="drawer" aria-label="Vendor review" aria-hidden="true">
+  <div class="dh"><div><span class="label" id="dTier">Tier</span><h2 style="font-size:20px;margin-top:4px" id="dName">Vendor</h2><span class="muted" id="dSvc"></span></div><button class="x" id="dClose" type="button" aria-label="Close">×</button></div>
+  <div class="db">
+    <div class="gate closed" id="dGate"></div>
+    <dl class="kv" id="dKv"></dl>
+    <div><span class="label">Safety check</span><div id="dChecks" style="margin-top:6px"></div></div>
+  </div>
+  <div class="df"><span class="muted" id="dProg" style="margin-right:auto;font-size:13px"></span><button class="btn ghost" type="button" id="dBlock">Keep blocked</button><button class="btn primary" type="button" id="dApprove" disabled>Approve company</button></div>
+</aside>
+
+<!-- welcome -->
+<div class="modal" id="welcome" role="dialog" aria-modal="true" aria-labelledby="wTitle">
+  <div class="m">
+    <svg width="44" height="44" viewBox="0 0 32 32" aria-hidden="true"><path d="M16 2l12 4.5v9c0 7-5.2 12-12 14.5C9.2 27.5 4 22.5 4 15.5v-9z" fill="#F2A541"/><path d="M10.5 16l3.8 3.8 7.4-7.6" fill="none" stroke="#1A1206" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg>
+    <h2 id="wTitle">Welcome to ProveIt</h2>
+    <p>ProveIt helps NtapAT&amp;T Digital keep customer information safe. It makes sure every outside company we work with proves it protects our customers, and that employees only see what they need.</p>
+    <p>First time here? A quick tour shows you each screen and what to click. No technical knowledge needed.</p>
+    <div class="row"><button class="btn primary" type="button" id="wStart"><svg width="14" height="14"><use href="#i-play"/></svg>Start the tour</button><button class="btn" type="button" id="wSkip">Explore on my own</button></div>
+    <p style="font-size:12.5px">Everything here is demo data. Customer records and vendor names are synthetic.</p>
+  </div>
+</div>
+
+<div class="spot" id="spot"></div>
+<div class="coach" id="coach" role="dialog" aria-live="polite" aria-labelledby="cTitle">
+  <span class="step" id="cStep"></span>
+  <h4 id="cTitle"></h4>
+  <p id="cBody"></p>
+  <div class="nav"><button class="skip" type="button" id="cEnd">End tour</button><div class="dots" id="cDots"></div><div style="display:flex;gap:6px"><button class="btn sm" type="button" id="cBack">Back</button><button class="btn sm primary" type="button" id="cNext">Next</button></div></div>
+</div>
+<div class="toast" id="toast"></div>
+
+<script>
+(function () {
+  var $ = function (s, r) { return (r || document).querySelector(s); };
+  var $$ = function (s, r) { return Array.prototype.slice.call((r || document).querySelectorAll(s)); };
+  function esc(s) { return String(s).replace(/[&<>"]/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]; }); }
+  function toast(msg) { var t = $('#toast'); t.textContent = msg; t.classList.add('on'); clearTimeout(t._h); t._h = setTimeout(function () { t.classList.remove('on'); }, 2200); }
+
+  /* ---------- routing ---------- */
+  var views = ['overview', 'trail', 'vendors', 'access', 'data', 'alerts', 'privacy'];
+  function go(v) {
+    if (views.indexOf(v) < 0) v = 'overview';
+    $$('.view').forEach(function (el) { el.classList.toggle('on', el.id === 'v-' + v); });
+    $$('.navlist a').forEach(function (a) { a.classList.toggle('on', a.dataset.v === v); });
+    $('#crumb').textContent = $('#v-' + v).dataset.title;
+    if (location.hash.slice(1) !== v) { try { history.replaceState(null, '', '#' + v); } catch (e) {} }
+    window.scrollTo(0, 0);
+  }
+  window.addEventListener('hashchange', function () { go(location.hash.slice(1)); });
+
+  /* ---------- customers + trail ---------- */
+  var vendorBy = { Payments: 'Payvanta', Email: 'Mailorra', Analytics: 'Quantilo', Shipping: 'Parcelyn', 'Support desk': 'Helpnest', Ads: 'Adlumen' };
+  var hopInfo = {
+    Payments: { t: '+0:02', what: 'charges the card', f: 'Name, card •••• last 4, amount' },
+    Email: { t: '+0:05', what: 'sends the receipt', f: 'Name, email, order details' },
+    Analytics: { t: '+0:31', what: 'logs the purchase', f: 'Purchase, loyalty tier' },
+    Shipping: { t: '+0:40', what: 'books delivery', f: 'Name, address' },
+    'Support desk': { t: '+1:10', what: 'opens a support profile', f: 'Name, email, order' },
+    Ads: { t: '+1:25', what: 'builds an ad audience', f: 'Purchase, preferences' }
+  };
+  var customers = [
+    { id: 'C-224906', name: 'Maria Alvarez', email: 'm.alvarez@example.com', tier: 'Bronze', buy: 'Charging dock', amt: '$124.62', card: '•••• 4242', shared: ['Payments', 'Email', 'Analytics'], when: 'Tuesday, 9:14 p.m.' },
+    { id: 'C-751673', name: 'Jamal Mensah', email: 'j.mensah@example.com', tier: 'Platinum', buy: 'Charging dock', amt: '$88.30', card: '•••• 4111', shared: ['Payments', 'Shipping'], when: 'Monday, 12:02 p.m.' },
+    { id: 'C-351589', name: 'Kenji Castillo', email: 'k.castillo@example.com', tier: 'Gold', buy: 'Charging dock', amt: '$46.27', card: '•••• 5556', shared: ['Email', 'Support desk'], when: 'Sunday, 6:40 p.m.' },
+    { id: 'C-516512', name: 'Marcus Okafor', email: 'm.okafor@example.com', tier: 'Bronze', buy: 'Smartwatch band', amt: '$87.79', card: '•••• 5556', shared: ['Payments', 'Analytics', 'Ads'], when: 'Saturday, 8:21 a.m.' },
+    { id: 'C-768695', name: 'Aisha Lindqvist', email: 'a.lindqvist@example.com', tier: 'Gold', buy: '5G hotspot', amt: '$217.08', card: '•••• 5556', shared: ['Shipping', 'Support desk'], when: 'Friday, 3:55 p.m.' }
+  ];
+  var cur = 0, summary = false;
+  function initials(n) { return n.split(' ').map(function (p) { return p[0]; }).join(''); }
+  function renderCust() {
+    $('#custList').innerHTML = customers.map(function (c, i) {
+      return '<button type="button" aria-pressed="' + (i === cur) + '" data-i="' + i + '"><span class="av">' + initials(c.name) + '</span><span><b>' + esc(c.name) + '</b><span class="cid">' + c.id + '</span></span></button>';
+    }).join('');
+  }
+  $('#custList').addEventListener('click', function (e) { var b = e.target.closest('button'); if (!b) return; cur = +b.dataset.i; renderCust(); renderTrail(); renderRecord(); });
+  function renderTrail() {
+    var c = customers[cur];
+    $('#trailTitle').textContent = c.name + ' · ' + c.when;
+    $('#trailCount').textContent = 'Shared with ' + c.shared.length + ' outside compan' + (c.shared.length > 1 ? 'ies' : 'y');
+    var h = '<div class="hop"><span class="time">+0:00</span><span class="rail"><i></i></span><div class="box"><div><b>Checkout at NtapAT&amp;T Digital</b><div class="f">' + esc(c.buy) + ' · ' + c.amt + ' · ' + c.id + '</div></div><span class="pill p-mute">Inside our company</span></div></div>';
+    h += '<div class="wall"><span></span><span></span><div>BELOW THIS LINE, DATA LEAVES OUR COMPANY</div></div>';
+    c.shared.forEach(function (s) {
+      var vn = vendorBy[s], v = vendors.filter(function (x) { return x.name === vn; })[0];
+      h += '<div class="hop out"><span class="time">' + hopInfo[s].t + '</span><span class="rail"><i></i></span><div class="box"><div><b>' + vn + ' ' + hopInfo[s].what + '</b><div class="f">Gets: ' + hopInfo[s].f + '</div></div>' + statusPill(v) + '</div></div>';
+    });
+    $('#flow').innerHTML = h;
+  }
+  function renderRecord() {
+    var c = customers[cur];
+    var rows = summary ? [
+      ['Customer', c.name.split(' ')[0] + ' ' + c.name.split(' ')[1][0] + '.', true], ['ID', c.id], ['Email', c.email[0] + '•••••@example.com', true], ['Loyalty tier', c.tier], ['Last purchase', c.buy + ' · last 90 days', true], ['Card', 'Not visible to this role', true], ['Shared with', c.shared.map(function (s) { return vendorBy[s]; }).join(', ')]
+    ] : [
+      ['Customer', c.name], ['ID', c.id], ['Email', c.email], ['Loyalty tier', c.tier], ['Last purchase', c.buy + ' · ' + c.amt], ['Card', c.card], ['Shared with', c.shared.map(function (s) { return vendorBy[s]; }).join(', ')]
+    ];
+    $('#recTbl tbody').innerHTML = rows.map(function (r) { return '<tr><td class="muted" style="width:140px">' + r[0] + '</td><td' + (r[2] ? ' class="masked"' : '') + '>' + esc(r[1]) + '</td></tr>'; }).join('');
+    $('#recNote').textContent = summary ? 'A support agent sees only what the job needs. The rest is hidden.' : 'The full record: everything someone with no limits could see.';
+    $('#vFull').setAttribute('aria-pressed', String(!summary));
+    $('#vSum').setAttribute('aria-pressed', String(summary));
+  }
+  $('#vFull').addEventListener('click', function () { summary = false; renderRecord(); });
+  $('#vSum').addEventListener('click', function () { summary = true; renderRecord(); });
+
+  /* ---------- vendors ---------- */
+  var checklist = [
+    ['Scrambles (encrypts) our customer data', 'So a stolen copy can’t be read'],
+    ['Its staff use two-step login', 'Password plus a phone code'],
+    ['Tells us within 3 days if it’s hacked', 'Written into the contract'],
+    ['Deletes our data when we stop working together', 'With written proof'],
+    ['Tells us every other company it shares our data with', 'Checked every year'],
+    ['Only gets the data it truly needs', 'Nothing extra']
+  ];
+  var vendors = [
+    { key: 'payvanta', name: 'Payvanta', svc: 'Payments', tier: 1, data: 'Name, card, amount', proof: 'Valid', pc: 'ok', last: 'Day 41', status: 'Approved', done: 6 },
+    { key: 'mailorra', name: 'Mailorra', svc: 'Email receipts', tier: 1, data: 'Name, email, order', proof: 'Valid', pc: 'ok', last: 'Day 52', status: 'Approved', done: 6 },
+    { key: 'quantilo', name: 'Quantilo', svc: 'Sales reports', tier: 1, data: 'Purchases, loyalty tier', proof: 'Expires in 12 days', pc: 'warn', last: 'Day 18', status: 'Renewal due', done: 5 },
+    { key: 'stratocask', name: 'Stratocask', svc: 'Online storage', tier: 1, data: 'All customer records', proof: 'Valid', pc: 'ok', last: 'Day 60', status: 'Approved', done: 6 },
+    { key: 'signetra', name: 'Signetra', svc: 'Employee login', tier: 1, data: 'Name, email', proof: 'Valid', pc: 'ok', last: 'Day 35', status: 'Approved', done: 6 },
+    { key: 'helpnest', name: 'Helpnest', svc: 'Support desk', tier: 2, data: 'Name, email, support records', proof: 'Missing', pc: 'bad', last: '—', status: 'In review', done: 3 },
+    { key: 'parcelyn', name: 'Parcelyn', svc: 'Shipping', tier: 2, data: 'Name, address', proof: 'Valid', pc: 'ok', last: 'Day 66', status: 'Approved', done: 6 },
+    { key: 'adlumen', name: 'Adlumen', svc: 'Ad targeting', tier: 3, data: 'Purchases, preferences', proof: 'Never provided', pc: 'bad', last: '—', status: 'Suspended', done: 0 },
+    { key: 'printmint', name: 'Printmint', svc: 'Marketing mail', tier: 3, data: 'Name, address', proof: 'Valid', pc: 'ok', last: 'Day 70', status: 'Approved', done: 6 },
+    { key: 'chatterly', name: 'Chatterly', svc: 'Live chat support · new request', tier: 2, data: 'Name, email, chat transcripts', proof: 'Submitted, not checked', pc: 'warn', last: '—', status: 'Blocked: awaiting review', done: 2 }
+  ];
+  function statusPill(v) {
+    var cls = v.status === 'Approved' ? 'p-ok' : (v.status === 'Suspended' || v.status.indexOf('Blocked') === 0) ? 'p-bad' : 'p-warn';
+    var txt = v.status === 'Approved' ? 'Approved · passed check' : v.status;
+    if (v.key === 'quantilo') txt = 'Proof runs out in 12 days';
+    if (v.key === 'adlumen') txt = 'Never checked · cut off';
+    return '<span class="pill ' + cls + '">' + txt + '</span>';
+  }
+  function renderVendors() {
+    $('#vendTbody').innerHTML = vendors.map(function (v) {
+      return '<tr class="click" data-k="' + v.key + '" tabindex="0"><td><b>' + v.name + '</b><div class="muted" style="font-size:12.5px">' + v.svc + '</div></td><td><span class="pill ' + (v.tier === 1 ? 'p-bad' : v.tier === 2 ? 'p-warn' : 'p-info') + '">' + (v.tier === 1 ? 'High' : v.tier === 2 ? 'Medium' : 'Low') + '</span></td><td>' + v.data + '</td><td><span class="pill p-' + v.pc + '">' + v.proof + '</span></td><td class="mono muted">' + v.last + '</td><td>' + statusPill(v) + '</td></tr>';
+    }).join('');
+    var blocked = vendors.filter(function (v) { return v.status === 'Suspended' || v.status.indexOf('Blocked') === 0; }).length;
+    $('#blockedKpi').innerHTML = blocked + ' <small>no check, no data</small>';
+    var attention = vendors.filter(function (v) { return v.status !== 'Approved' && v.key !== 'quantilo' && v.key !== 'helpnest'; }).length;
+    $('#vendorCount').textContent = attention;
+    $('#vendorCount').style.display = attention ? '' : 'none';
+  }
+  $('#vendTbody').addEventListener('click', function (e) { var r = e.target.closest('tr'); if (r) openVendor(r.dataset.k); });
+  $('#vendTbody').addEventListener('keydown', function (e) { if (e.key === 'Enter') { var r = e.target.closest('tr'); if (r) openVendor(r.dataset.k); } });
+  var open = null;
+  function openVendor(k) {
+    var v = vendors.filter(function (x) { return x.key === k; })[0]; if (!v) return;
+    open = v;
+    $('#dTier').textContent = (v.tier === 1 ? 'High' : v.tier === 2 ? 'Medium' : 'Low') + ' risk';
+    $('#dName').textContent = v.name;
+    $('#dSvc').textContent = v.svc;
+    $('#dKv').innerHTML = '<dt>Customer data</dt><dd>' + v.data + '</dd><dt>Safety proof</dt><dd>' + v.proof + '</dd><dt>Contract</dt><dd>' + (v.done >= 3 ? 'Data protection terms signed' : 'Not signed') + '</dd><dt>Last checked</dt><dd>' + v.last + '</dd><dt>Next check</dt><dd>' + (v.status === 'Approved' ? 'Every year · day ' + (Math.min(330, 300 + v.tier * 10)) : 'Before it gets any data') + '</dd>';
+    $('#dChecks').innerHTML = checklist.map(function (c, i) {
+      return '<label class="check"><input type="checkbox" ' + (i < v.done ? 'checked' : '') + ' data-i="' + i + '"><span>' + c[0] + '<small>' + c[1] + '</small></span></label>';
+    }).join('');
+    updateGate();
+    $('#drawer').classList.add('on'); $('#drawer').setAttribute('aria-hidden', 'false'); $('#scrim').classList.add('on');
+  }
+  function closeVendor() { $('#drawer').classList.remove('on'); $('#drawer').setAttribute('aria-hidden', 'true'); $('#scrim').classList.remove('on'); open = null; }
+  function updateGate() {
+    var n = $$('#dChecks input:checked').length, all = n === checklist.length;
+    $('#dProg').textContent = n + ' of ' + checklist.length + ' checks passed';
+    var approved = open && open.status === 'Approved';
+    $('#dApprove').disabled = !all || approved;
+    $('#dApprove').textContent = approved ? 'Approved' : 'Approve company';
+    var g = $('#dGate');
+    if (approved) { g.className = 'gate open'; g.textContent = 'Approved. This company proved it protects customer data.'; }
+    else if (all) { g.className = 'gate open'; g.textContent = 'Every check passed. You can approve this company.'; }
+    else { g.className = 'gate closed'; g.textContent = 'Blocked. This company can’t get any customer data until every check passes.'; }
+  }
+  $('#dChecks').addEventListener('change', updateGate);
+  $('#dApprove').addEventListener('click', function () {
+    if (!open) return;
+    open.status = 'Approved'; open.done = 6; open.proof = 'Valid'; open.pc = 'ok'; open.last = 'Day 74';
+    var nm = open.name; renderVendors(); renderTrail(); openVendor(open.key); toast(nm + ' approved. Next review in one year.');
+  });
+  $('#dBlock').addEventListener('click', function () { if (open) toast(open.name + ' stays blocked until the review is complete.'); closeVendor(); });
+  $('#dClose').addEventListener('click', closeVendor);
+  $('#scrim').addEventListener('click', closeVendor);
+  document.addEventListener('keydown', function (e) { if (e.key === 'Escape' && $('#drawer').classList.contains('on')) closeVendor(); });
+  document.addEventListener('click', function (e) {
+    var a = e.target.closest('[data-open]'); if (!a) return;
+    var k = a.dataset.open;
+    if (a.tagName === 'A') { e.preventDefault(); go('vendors'); }
+    openVendor(k);
+  });
+
+  /* ---------- access ---------- */
+  var excess = [
+    ['J. Ortega', 'Marketing analyst', 'Full customer records'],
+    ['R. Patel', 'Support agent', 'Card details'],
+    ['L. Chen', 'Engineer', 'The live customer list'],
+    ['D. Moore', 'Support agent', 'Download all customers']
+  ];
+  var lp = 481, exc = 19;
+  function renderExcess() {
+    $('#excessList').innerHTML = excess.map(function (x, i) {
+      var done = x[3];
+      return '<div class="li"><div class="ic" style="background:var(--raised)"><svg><use href="#i-user"/></svg></div><div class="body"><b>' + x[0] + ' · ' + x[1] + '</b><span>Can see: ' + x[2] + '</span></div>' + (done ? '<span class="pill p-ok">Limited</span>' : '<button class="btn sm" type="button" data-lim="' + i + '">Limit access</button>') + '</div>';
+    }).join('');
+    var pct = Math.round(lp / 5);
+    $('#lpKpi').innerHTML = pct + '% <small>' + lp + ' of 500</small>'; $('#lpMeter').style.width = pct + '%';
+    $('#lpKpi2').innerHTML = pct + '% <small>' + lp + ' of 500</small>';
+    $('#excessLabel').textContent = exc + ' accounts'; $('#excessCount').textContent = exc;
+  }
+  $('#excessList').addEventListener('click', function (e) { var b = e.target.closest('[data-lim]'); if (!b) return; excess[+b.dataset.lim][3] = true; lp++; exc--; renderExcess(); toast('Done. They now see only what their job needs.'); });
+
+  /* ---------- data stores ---------- */
+  var stores = [
+    ['Orders database', 'Online database', 'Payments, purchases', true, 'ok', 'Tracked'],
+    ['Customer contacts', 'Online database', 'Names, emails, marketing', true, 'ok', 'OK'],
+    ['Rewards program', 'Online database', 'Points and rewards', true, 'ok', 'OK'],
+    ['Old support chats', 'Online file folder', 'Support conversations', false, 'bad', 'Anyone with the link can open it'],
+    ['Marketing lists', 'Online file folder', 'Names, emails', false, 'warn', 'Old copies from 2023'],
+    ['Sales reports', 'Reporting system', 'Purchases', true, 'ok', 'OK']
+  ];
+  var labeled = 38, flags = 1;
+  function renderStores() {
+    $('#storeTbody').innerHTML = stores.map(function (s, i) {
+      return '<tr><td><b>' + s[0] + '</b></td><td class="muted">' + s[1] + '</td><td>' + s[2] + '</td><td>' + (s[3] ? '<span class="pill p-ok">Labeled</span>' : '<span class="pill p-warn">Unlabeled</span>') + '</td><td><span class="pill p-' + s[4] + '">' + s[5] + '</span></td><td>' + (!s[3] || s[4] === 'bad' ? '<button class="btn sm" type="button" data-fix="' + i + '">Label and lock</button>' : '') + '</td></tr>';
+    }).join('');
+    $('#labKpi').innerHTML = labeled + ' <small>of 64</small>'; $('#labMeter').style.width = Math.round(labeled / 64 * 100) + '%';
+    $('#flagKpi').innerHTML = flags + ' <small>' + (flags === 1 ? 'public link' : 'public links') + '</small>';
+  }
+  $('#storeTbody').addEventListener('click', function (e) {
+    var b = e.target.closest('[data-fix]'); if (!b) return;
+    var s = stores[+b.dataset.fix];
+    if (s[4] === 'bad') flags--;
+    if (!s[3]) labeled++;
+    s[3] = true; s[4] = 'ok'; s[5] = s[0] === 'Marketing lists' ? 'Old copies deleted' : 'Locked';
+    renderStores(); toast(s[0] + ' is labeled and locked.');
+  });
+
+  /* ---------- privacy ---------- */
+  var reqs = [
+    ['REQ-1043', 'Kenji Castillo', 'Marketing opt-out', 'in 2 days', false],
+    ['REQ-1041', 'Jamal Mensah', 'Copy of my data', 'in 9 days', false],
+    ['REQ-1042', 'Aisha Lindqvist', 'Delete my account', 'in 21 days', false],
+    ['REQ-1039', 'Marcus Okafor', 'Correct my email', 'Done day 70', true]
+  ];
+  var answered = 14;
+  function renderReqs() {
+    $('#reqTbody').innerHTML = reqs.map(function (r, i) {
+      return '<tr><td class="mono">' + r[0] + '</td><td>' + r[1] + '</td><td>' + r[2] + '</td><td class="muted">' + r[3] + '</td><td>' + (r[4] ? '<span class="pill p-ok">Completed on time</span>' : '<span class="pill p-warn">Open</span>') + '</td><td>' + (r[4] ? '' : '<button class="btn sm" type="button" data-req="' + i + '">Complete</button>') + '</td></tr>';
+    }).join('');
+    var open = reqs.filter(function (r) { return !r[4]; }).length;
+    $('#openReq').textContent = open;
+    $('#onTime').innerHTML = '100% <small>' + answered + ' of ' + answered + '</small>';
+  }
+  $('#reqTbody').addEventListener('click', function (e) { var b = e.target.closest('[data-req]'); if (!b) return; var r = reqs[+b.dataset.req]; r[4] = true; r[3] = 'Done day 74'; answered++; renderReqs(); toast(r[0] + ' completed on time.'); });
+
+  /* ---------- tour ---------- */
+  var steps = [
+    { v: 'overview', t: '#t-kpis', h: 'Your home screen', b: 'These cards show our goals for keeping customer data safe. Green means we’re on track. Yellow means a deadline is coming up.', s: 'This screen shows whether our plan is working.' },
+    { v: 'overview', t: '#t-attention', h: 'What needs you today', b: 'Anything that needs action shows up here, with a button to fix it. Start here each day.', s: 'Nothing slips through the cracks.' },
+    { v: 'trail', t: '#t-trail', h: 'Where did a customer’s information go?', b: 'Pick a customer on the left. You’ll see each outside company that got their information, and whether that company passed our safety check. Try Marcus: one company was never checked.', s: 'We can always answer: who has this customer’s information?' },
+    { v: 'trail', t: '#t-record', h: 'People see only what they need', b: 'Click “What support sees.” A support employee gets a partly hidden version, with no card number.', s: 'Employees only see what their job needs.', act: function () { summary = false; renderRecord(); } },
+    { v: 'vendors', t: '#t-vendors', h: 'Every outside company in one list', b: 'Every company that handles our customer data, ranked high, medium or low risk, with whether its safety proof is up to date.', s: 'Every company has to prove it protects our customers.' },
+    { v: 'vendors', t: '#drawer', h: 'No safety check, no customer data', b: 'Chatterly is a new company that wants customer chats. It’s blocked until every box is checked. Tick the rest, then click “Approve company.”', s: 'A new company gets no customer data until it passes.', act: function () { openVendor('chatterly'); }, leave: closeVendor },
+    { v: 'access', t: '#t-matrix', h: 'What each job can see', b: 'Each job only sees what it needs. Green means “can’t see,” yellow means “partly,” red means “full access.”', s: 'Less access means less risk.' },
+    { v: 'access', t: '#t-excess', h: 'Fix extra access in one click', b: 'These employees can see more than their job needs. Click “Limit access” to fix it.', s: 'One click brings access back to what the job needs.' },
+    { v: 'data', t: '#t-stores', h: 'Know where data is kept', b: 'This lists where customer data is stored. Click “Label and lock” on the folder anyone could open.', s: 'Data we don’t keep, or keep locked, can’t leak.' },
+    { v: 'alerts', t: '#t-activity', h: 'Get warned about trouble', b: 'Suspicious activity, like someone guessing passwords, shows up here. Many threats are blocked automatically.', s: 'We find problems in hours, not days.' },
+    { v: 'privacy', t: '#t-privacy', h: 'Answer customer requests on time', b: 'When a customer asks to see or delete their information, it’s tracked here. Click “Complete” when it’s done.', s: 'Every customer gets an answer on time.' },
+    { v: 'overview', t: '#t-kpis', h: 'That’s it!', b: 'Use the menu on the left to explore. You can replay this tour anytime with the button at the top.', s: 'Every company proves it. Every goal is tracked.' }
+  ];
+  var si = -1;
+  function place() {
+    if (si < 0) return;
+    var st = steps[si], el = $(st.t); if (!el) return;
+    var r = el.getBoundingClientRect(), pad = 8, vw = window.innerWidth, vh = window.innerHeight;
+    var spot = $('#spot');
+    var top = Math.max(4, r.top - pad), left = Math.max(4, r.left - pad);
+    var w = Math.min(vw - 8, r.width + pad * 2), h = Math.min(vh - 8 - top, r.height + pad * 2);
+    spot.style.top = top + 'px'; spot.style.left = left + 'px'; spot.style.width = w + 'px'; spot.style.height = h + 'px';
+    var c = $('#coach'), cw = c.offsetWidth, ch = c.offsetHeight, ct, cl;
+    if (st.t === '#drawer') { ct = vh - ch - 24; cl = Math.max(12, r.left - cw - 24); }
+    else if (top + h + ch + 16 < vh) { ct = top + h + 14; cl = left; }
+    else if (top - ch - 14 > 0) { ct = top - ch - 14; cl = left; }
+    else { ct = vh - ch - 16; cl = left + w - cw - 16; }
+    cl = Math.max(12, Math.min(cl, vw - cw - 12));
+    c.style.top = ct + 'px'; c.style.left = cl + 'px';
+  }
+  function show(i) {
+    if (si >= 0 && steps[si].leave && i !== si) steps[si].leave();
+    si = i;
+    $('#toast').classList.remove('on');
+    var st = steps[i];
+    go(st.v);
+    if (st.act) st.act();
+    $('#cStep').textContent = 'STEP ' + (i + 1) + ' OF ' + steps.length;
+    $('#cTitle').textContent = st.h; $('#cBody').textContent = st.b;
+    $('#cDots').innerHTML = steps.map(function (_, j) { return '<i class="' + (j === i ? 'on' : '') + '"></i>'; }).join('');
+    $('#cBack').disabled = i === 0;
+    $('#cNext').textContent = i === steps.length - 1 ? 'Finish' : 'Next';
+    $('#spot').classList.add('on'); $('#coach').classList.add('on');
+    var el = $(st.t);
+    if (el && st.t !== '#drawer') {
+      var r = el.getBoundingClientRect();
+      var y = window.scrollY + r.top - 90;
+      window.scrollTo({ top: Math.max(0, y), behavior: 'auto' });
+    }
+    setTimeout(place, st.t === '#drawer' ? 320 : 30);
+    $('#cNext').focus({ preventScroll: true });
+  }
+  function endTour() {
+    if (si >= 0 && steps[si].leave) steps[si].leave();
+    si = -1; $('#spot').classList.remove('on'); $('#coach').classList.remove('on');
+    try { localStorage.setItem('proveit-toured', '1'); } catch (e) {}
+  }
+  $('#cNext').addEventListener('click', function () { if (si === steps.length - 1) { endTour(); toast('Tour complete. Explore any screen from the sidebar.'); } else show(si + 1); });
+  $('#cBack').addEventListener('click', function () { if (si > 0) show(si - 1); });
+  $('#cEnd').addEventListener('click', endTour);
+  document.addEventListener('keydown', function (e) {
+    if (si < 0) return;
+    if (e.key === 'ArrowRight') $('#cNext').click();
+    else if (e.key === 'ArrowLeft') $('#cBack').click();
+    else if (e.key === 'Escape') endTour();
+  });
+  window.addEventListener('resize', place);
+  window.addEventListener('scroll', place, { passive: true });
+  function startTour() { $('#welcome').classList.remove('on'); show(0); }
+  $('#tourBtn').addEventListener('click', startTour);
+  $('#wStart').addEventListener('click', startTour);
+  $('#wSkip').addEventListener('click', function () { $('#welcome').classList.remove('on'); try { localStorage.setItem('proveit-toured', '1'); } catch (e) {} });
+  window.proveitTour = { start: startTour, next: function () { $('#cNext').click(); } };
+
+  /* ---------- boot ---------- */
+  renderCust(); renderTrail(); renderRecord(); renderVendors(); renderExcess(); renderStores(); renderReqs();
+  go(location.hash.slice(1) || 'overview');
+  var seen = false; try { seen = localStorage.getItem('proveit-toured') === '1'; } catch (e) {}
+  if (!seen) $('#welcome').classList.add('on');
+})();
+</script>
+</body>
+</html>

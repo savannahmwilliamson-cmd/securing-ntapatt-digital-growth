@@ -1,66 +1,74 @@
 # Securing NtapAT&T Digital's Growth
 
-A one-page cybersecurity strategy for **NtapAT&T Digital**, a fictional company used as a case study. It covers the problem, what's at stake, the top risks, the mitigation plan, a 365-day roadmap, the first-year budget and how success is measured.
+A cybersecurity strategy for **NtapAT&T Digital**, a fictional company used as a case study. It's a practical plan to protect customer data while the business grows.
 
-> All customer records on the page are synthetic. No real customer data was used.
+**Team:** Morenike Orimalade · Da'ron Tucker · Nia Bethea · Savannah Williamson
+NetApp · November 2026
 
-## What's on the page
+> All customer records in this project are synthetic. No real customer data was used.
 
-| # | Section | What it covers |
-|---|---------|----------------|
-| — | Story | Maria's purchase leaves the company three times in 90 seconds (animated data trail) |
-| 01 | The problem | The business is growing faster than its security |
-| 02 | What's at stake | The six kinds of customer data the company holds |
-| 03 | Mock data | Five synthetic customer records, with a full-record vs. role-based-summary toggle |
-| 04 | Risks | Five risks scored on a likelihood × impact heat map |
-| 05 | Business impact | What each risk costs finance, sales and marketing |
-| 06 | Recommendation | The Vendor Management Program and three supporting measures |
-| 07 | Mitigation plan | A fix, an owner and a KPI for each risk |
-| 08 | Roadmap | Four phases over 365 days |
-| 09 | Budget | $617,161 for year one ($0.62 per customer) |
-| 10 | Success measures | Targets, owners and deadlines |
+## What we turn in
 
-## Roadmap at a glance
+| ✓ | Deliverable | What it covers | Where |
+|---|-------------|----------------|-------|
+| ✅ | **Risk report** | The top risks, ranked | [deliverables/1-risk-report.md](deliverables/1-risk-report.md) |
+| ✅ | **Fix plan + roadmap** | What to do, in what order | [deliverables/2-fix-plan-and-roadmap.md](deliverables/2-fix-plan-and-roadmap.md) |
+| ✅ | **Budget** | Cost and business value | [deliverables/3-budget.md](deliverables/3-budget.md) |
+| ✅ | **Success measures** | How we'll know it worked | [deliverables/4-success-measures.md](deliverables/4-success-measures.md) |
+| ✅ | **Demo video + slide deck** | For leadership | [deliverables/5-presentation/](deliverables/5-presentation/) |
+| ✅ | **Strategy website** | Everything above on one interactive page | [index.html](index.html) |
+| ✅ | **ProveIt demo** | Clickable prototype of the Vendor Management Program | [demo/index.html](demo/index.html) |
 
-| Phase | Days | Focus | Owner |
-|-------|------|-------|-------|
-| 1 | 0–30 | Build the foundation: vendor inventory, tiers, review rule | Vendor Mgmt & IT/Security |
-| 2 | 31–90 | Lock down access (2FA, least privilege) and review Tier 1 vendors | IT/Security & Managers |
-| 3 | 91–180 | Open customer rights: privacy portal, Tier 2–3 reviews, incident drill | Legal/Compliance & Vendor Mgmt |
-| 4 | 181–365 | Keep proving it: yearly re-reviews, 100% of vendors with valid proof | Vendor Mgmt & IT/Data Management |
+**Tools:** AI tools (Claude) helped build the slides, the mock data, the website and the demo. The strategy, risks, targets and budget come from our own case work.
 
-## Project structure
+## The plan in 30 seconds
+
+- **Problem:** the business is growing faster than its security. In under a minute, a customer's data goes to three outside partners.
+- **Top risks:** vendor leaks (20/25) and cyberattacks (20/25), followed by excessive internal access (16/25).
+- **Recommendation:** a **Vendor Management Program**: every vendor has to prove it protects customer data. Three supporting steps back it up: give people less access, keep less data, and spot problems faster.
+- **Roadmap:** 4 phases over 365 days, each with an owner and a deadline.
+- **Budget:** **$617,161** in year one, about **$0.62 per customer**.
+- **Success:** 8 measurable targets by day 365, confirmed by an independent privacy audit.
+
+## Repository layout
 
 ```
 .
-├── index.html          # The page
+├── index.html                    # Strategy website (home page)
 ├── assets/
-│   ├── styles.css      # All styling
-│   └── main.js         # Mock-data table, heat map and impact tabs
-├── .nojekyll           # Tells GitHub Pages to serve files as-is
+│   ├── styles.css
+│   └── main.js                   # Mock-data table, heat map, impact tabs
+├── demo/
+│   └── index.html                # ProveIt vendor-security prototype
+├── deliverables/
+│   ├── 1-risk-report.md
+│   ├── 2-fix-plan-and-roadmap.md
+│   ├── 3-budget.md
+│   ├── 4-success-measures.md
+│   └── 5-presentation/
+│       ├── README.md             # Deck, scripts, video link, timing
+│       ├── Slide_Deck_Securing_Digital_Business_Growth.pptx
+│       ├── Presentation_Script_Outline.docx
+│       └── Presentation_Script_Talking_Points.docx
+├── .nojekyll
 └── README.md
 ```
 
-It's plain HTML, CSS and JavaScript. There's nothing to install or build.
+## View the website
 
-## View it locally
+**Online:** turn on GitHub Pages (below). The strategy page is at `https://<username>.github.io/<repo>/` and the demo at `.../demo/`.
 
-Open `index.html` in a browser, or run a small local server from this folder:
+**On your computer:** open `index.html` in a browser, or run a small local server from this folder:
 
 ```bash
 python3 -m http.server 8000
-# then visit http://localhost:8000
+# strategy page: http://localhost:8000
+# demo:          http://localhost:8000/demo/
 ```
 
 ## Publish with GitHub Pages
 
 1. Push this repository to GitHub.
 2. Go to **Settings → Pages**.
-3. Under **Build and deployment**, set **Source** to *Deploy from a branch*, pick `main` and `/ (root)`, then **Save**.
-4. After a minute the site is live at `https://<your-username>.github.io/<repo-name>/`.
-
-## Team
-
-Morenike Orimalade · Da'ron Tucker · Nia Bethea · Savannah Williamson
-
-NetApp · November 16, 2026
+3. Set **Source** to *Deploy from a branch*, pick `main` and `/ (root)`, then click **Save**.
+4. After about a minute, the site is live.
