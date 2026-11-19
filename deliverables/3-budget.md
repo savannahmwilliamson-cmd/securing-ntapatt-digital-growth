@@ -16,8 +16,6 @@
 
 The money pays for staff time, software licenses, outside services, training and equipment. Phase 2 costs the most because it's when two-factor login, least-privilege access, database logging and Tier 1 vendor reviews all go live. The contingency is used only for overruns that leadership approves.
 
-The full line-item budget is in the [Customer Data Protection Roadmap Budget](https://claude.ai/artifact/7CmrbfbBz3ScAKJfQ6aLrP) sheet.
-
 ## Business value
 
 **$0.62 per registered customer** for a full year of protection ($617,161 ÷ 1,000,000 customers).

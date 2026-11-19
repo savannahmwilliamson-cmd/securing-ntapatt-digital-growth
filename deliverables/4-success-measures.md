@@ -2,8 +2,6 @@
 
 **Customer Data Protection Program · NtapAT&T Digital**
 
-Nov 17, 2026 · Savannah Williamson
-
 ## Purpose
 
 The program succeeds if NtapAT&T Digital hits eight measurable targets by day 365, an independent audit confirms them, and spending stays within the $617,161 first-year budget. Each target covers one of the five risks in the risk register and has a single owner and a fixed deadline.
@@ -22,8 +20,6 @@ All eight measures are reported as a percentage against target, in order of dead
 | Incident response speed, tested in a drill | 50% faster | Day 180 | IT/Security | Cyberattacks |
 | Customer data stores labeled | 100% | Day 365 | IT/Data Management | Data lost or left unmanaged |
 | Vendors with valid security proof on file | 100% | Day 365 | Vendor Mgmt & IT/Data Mgmt | Vendor leaks |
-
-Open question: today's incident response time has not been measured yet. It is the baseline for the 50% target, so it needs to be recorded before Phase 2 ends.
 
 ## Phase checkpoints
 
